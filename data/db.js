@@ -3,16 +3,22 @@ const config = require('../knexfile');
 
 const db = knex(config.development);
 
-const insert = user => {
+const register = user => {
     return db('users')
         .insert(user)
         .then(response => response)
         .catch(err => err);
 }
 
-const getOne = username => {
+const login = ({
+    username,
+    password
+}) => {
     return db('users')
-        .where({username})
+        .where({
+            username,
+            password
+        })
         .then(response => response)
         .catch(err => err);
 }
@@ -24,7 +30,7 @@ const getAll = _ => {
 }
 
 module.exports = {
-    insert,
-    getOne,
+    register,
+    login,
     getAll
 }
