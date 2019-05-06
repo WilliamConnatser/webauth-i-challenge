@@ -6,31 +6,37 @@ const db = knex(config.development);
 const register = user => {
     return db('users')
         .insert(user)
-        .then(response => response)
-        .catch(err => err);
+        .then(response => response);
 }
 
-const login = ({
-    username,
-    password
-}) => {
+const login = username => {
     return db('users')
         .where({
-            username,
-            password
+            username
         })
-        .then(response => response)
-        .catch(err => err);
+        .first()
+        .then(response => {
+            return response
+        });
+}
+
+const getById = id => {
+    return db('users')
+        .where({id})
+        .select(['id', 'username'])
+        .first()
+        .then(response => response);
 }
 
 const getAll = _ => {
     return db('users')
-        .then(response => response)
-        .catch(err => err);
+        .select(['id', 'username'])
+        .then(response => response);
 }
 
 module.exports = {
     register,
     login,
+    getById,
     getAll
 }

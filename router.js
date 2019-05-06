@@ -1,7 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const db = require('./data/db');
-const auth = require('./server').auth;
 
 const router = express.Router();
 
@@ -16,13 +15,19 @@ router.post('/register', (req, res) => {
                 username,
                 password: bcrypt.hashSync(password, 10)
             }).then(data => {
-                res.status.status(200).send(data);
+                return db.getById(data[0]);
+            })
+            .then(user => {
+                res.status(200).send(user);
             })
             .catch(err => {
-                res.status.status(500).send('Internal Server Error');
+                if (err.errno !== undefined && err.errno === 19)
+                    res.status(500).send('Username Taken');
+                else
+                    res.status(500).send('Internal Server Error');
             });
     } else {
-        res.status.status(500).send('Nice try, buddy');
+        res.status(500).send('Nice try, buddy');
     }
 });
 
@@ -33,32 +38,55 @@ router.post('/login', (req, res) => {
     } = req.body;
 
     if (username && password) {
-        db.login({
-                username,
-                password: bcrypt.hashSync(password, 10)
-            }).then(data => {
-                if (data.username !== undefined) {
-                    res.status.status(200).send(data);
+        db.login(username).then(user => {
+                if (user !== undefined && bcrypt.compareSync(password, user.password, 10)) {
+                    return db.getById(user.id);
                 } else {
-                    res.status.status(500).send('Nice try, buddy');
+                    res.status(401).send('Nice try, buddy');
                 }
 
             })
+            .then(user => {
+                res.status(200).send(user);
+            })
             .catch(err => {
-                res.status.status(500).send('Internal Server Error');
+                res.status(500).send('Internal Server Error');
             });
     } else {
-        res.status.status(500).send('Username and password required');
+        res.status(401).send('Username and password required');
     }
 });
 
+const auth = (req, res, next) => {
+    const {
+        username,
+        password
+    } = req.headers;
+
+    if (username && password) {
+        db.login(username).then(user => {
+                if (user !== undefined && bcrypt.compareSync(password, user.password, 10)) {
+                    next();
+                } else {
+                    res.status(401).send('Nice try, buddy... access denied!!');
+                }
+            })
+            .catch(err => {
+                res.status(500).send('Internal Server Error');
+            });
+    } else {
+        res.status(401).send('Username and password required');
+    }
+}
+
 router.get('/users', auth, (req, res) => {
-    db.getAll().then(data => {
-            res.status.status(200).send(data);
+    db.getAll()
+        .then(data => {
+            res.status(200).send(data);
         })
         .catch(err => {
-            res.status.status(500).send('Internal Server Error');
-        })
+            res.status(500).send('Internal Server Error');
+        });
 });
 
 
