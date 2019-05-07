@@ -40,6 +40,7 @@ router.post('/login', (req, res) => {
     if (username && password) {
         db.login(username).then(user => {
                 if (user !== undefined && bcrypt.compareSync(password, user.password, 10)) {
+                    req.session.username = username;
                     return db.getById(user.id);
                 } else {
                     res.status(401).send('Nice try, buddy');
@@ -50,6 +51,7 @@ router.post('/login', (req, res) => {
                 res.status(200).send(user);
             })
             .catch(err => {
+                console.log(err)
                 res.status(500).send('Internal Server Error');
             });
     } else {
@@ -63,19 +65,26 @@ const auth = (req, res, next) => {
         password
     } = req.headers;
 
-    if (username && password) {
-        db.login(username).then(user => {
-                if (user !== undefined && bcrypt.compareSync(password, user.password, 10)) {
-                    next();
-                } else {
-                    res.status(401).send('Nice try, buddy... access denied!!');
-                }
-            })
-            .catch(err => {
-                res.status(500).send('Internal Server Error');
-            });
-    } else {
-        res.status(401).send('Username and password required');
+    //Using session and cookies
+    if (req.session && req.session.username !== undefined) {
+        next();
+    }
+
+    //Without cookies using headers
+    // if (username && password) {
+    //     db.login(username).then(user => {
+    //             if (user !== undefined && bcrypt.compareSync(password, user.password, 10)) {
+    //                 next();
+    //             } else {
+    //                 res.status(401).send('Nice try, buddy... access denied!!');
+    //             }
+    //         })
+    //         .catch(err => {
+    //             res.status(500).send('Internal Server Error');
+    //         });
+    // }
+    else {
+        res.status(401).send('Login required');
     }
 }
 
@@ -88,6 +97,19 @@ router.get('/users', auth, (req, res) => {
             res.status(500).send('Internal Server Error');
         });
 });
+
+router.get('/logout', (req, res) => {
+    if (req.session) {
+        req.session.destroy(err => {
+            if (err)
+                res.status(500).send('Error logging out')
+            else
+                res.status(200).send('You\'re logged out')
+        })
+    } else {
+        req.status(300).send('You aint even logged in...')
+    }
+})
 
 
 
